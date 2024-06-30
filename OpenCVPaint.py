@@ -20,6 +20,9 @@ drawLandmark = mp.solutions.drawing_utils
 landmark_spec = drawLandmark.DrawingSpec(color=(255, 0, 0), thickness=2, circle_radius=3)
 connection_spec = drawLandmark.DrawingSpec(color=(180, 180, 180), thickness=2)
 
+
+
+
 # Define color constants
 white = (255, 255, 255)
 orange = (0, 165, 255)
@@ -32,7 +35,6 @@ yellow = (0, 255, 255)
 black = (0, 0, 0)
 
 # Initialize variables for painting
-cooldown_period = 0.8
 last_click_time = time.time()
 selected_color = black
 selected_tool = None
@@ -40,7 +42,15 @@ fill_mode = False
 circle_data = [] 
 line_data = []
 re_data = []
+pen_x = []
+pen_y = []
 msg = 'Welcome To OpenCv Paint v1.0'
+
+def set_cooldown_period():
+   if selected_tool == "pen":
+      return 0
+   else:
+      return 0.8
 
 
 border_color = (138, 11, 246) 
@@ -85,6 +95,7 @@ re = cv2.imread('toolimg/re.png')
 buck = cv2.imread('toolimg/buck.jpg')
 none = cv2.imread('toolimg/none.png')
 undo = cv2.imread('toolimg/undo.png')
+pen = cv2.imread("toolimg/pen.png")
 
 cap = cv2.VideoCapture(0)
 while cap.isOpened():
@@ -100,16 +111,17 @@ while cap.isOpened():
     rgb = image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb)
     ############################
-    cv2.putText(frame,str(msg), (200, 130), cv2.FONT_HERSHEY_SIMPLEX, 1, cyan, 4)
-    cv2.putText(frame,f'tool : {selected_tool}', (650, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.8, green, 2)
-    cv2.putText(frame,f'fill_mode : {fill_mode}', (650, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.8, green, 2)
+    cv2.putText(frame,str(msg), (200, 130), cv2.FONT_HERSHEY_SIMPLEX, 1,red, 4)
+    cv2.putText(frame,f'tool : {selected_tool}', (650, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.8,red, 2)
+    cv2.putText(frame,f'fill_mode : {fill_mode}', (650, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.8,red, 2)
     colorBar(frame)
-    PasteImg(frame,none,(20,110))
+    PasteImg(frame,pen,(20,110))
     PasteImg(frame,circ,(20,220))
     PasteImg(frame,line,(20,330))
     PasteImg(frame,re,(20,440))
     PasteImg(frame,buck,(20,550))
     PasteImg(frame,undo,(140,280))
+    PasteImg(frame,none,(140,390))
     if len(circle_data) != 0:
        for data in circle_data:
           fill = -1 if data[3] else 1
@@ -147,6 +159,7 @@ while cap.isOpened():
              dis = disx(points[0],midpoint)
              if dis < 25:
                current_time = time.time()
+               cooldown_period = set_cooldown_period()
                if current_time - last_click_time > cooldown_period:
                  last_click_time = time.time()
                  x = midpoint[0]
@@ -179,7 +192,7 @@ while cap.isOpened():
                  elif 650 < x < 720 and 10 < y < 80:
                      selected_color = black
                      msg = '[black] color selected'
-                 elif 20 < x < 120 and 110 < y < 210:
+                 elif 140 < x < 240 and 390 < y < 490:
                     msg = '[NO] tool selected'
                     selected_tool = None
                  elif 20 < x < 120 and 220 < y < 320:
@@ -194,6 +207,9 @@ while cap.isOpened():
                     msg = '[rectangle] tool selected'
                     selected_tool = 'rect'
                     re_points = []
+                 elif 20 < x < 120 and 110 < y < 210:
+                     msg = '[pen] tool selected'
+                     selected_tool = 'pen'
                  elif 20 < x < 120 and 550 < y < 650:
                     msg = '[fill_mode] changed'
                     fill_mode = not fill_mode
@@ -240,9 +256,20 @@ while cap.isOpened():
                            pt1 = re_points[0]
                            pt2 = re_points[1]
                            re_points = []
-                           re_data.append([pt1,pt2,selected_color,fill_mode])                     
+                           re_data.append([pt1,pt2,selected_color,fill_mode])   
+                    elif selected_tool == "pen":
+                        pen_x.append(x)
+                        pen_y.append(y)    
+                        if len(pen_x) > 100:
+                           pen_x.pop(0)  # Remove oldest data point
+                           pen_y.pop(0)     
+
+    for (x1, y1), (x2, y2) in zip(zip(pen_x,pen_y), zip(pen_x[1:], pen_y[1:])):
+      cv2.line(frame, (x1, y1), (x2, y2),selected_color, 4)        
     cv2.imshow('Frame',frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
      break
 cap.release()
 cv2.destroyAllWindows()
+
+
