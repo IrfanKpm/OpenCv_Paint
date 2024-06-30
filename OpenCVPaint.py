@@ -260,7 +260,7 @@ while cap.isOpened():
                     elif selected_tool == "pen":
                         pen_x.append(x)
                         pen_y.append(y)    
-                        if len(pen_x) > 100:
+                        if len(pen_x) > 350:
                            pen_x.pop(0)  # Remove oldest data point
                            pen_y.pop(0)     
 
